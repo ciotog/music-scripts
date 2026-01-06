@@ -1,0 +1,9 @@
+#!/bin/bash
+echo Checking lyrics
+~/bin/scripts/lyrics-flac-r
+echo Checking synced lyrics
+~/bin/scripts/lrc-flac-r
+chown -R :audio .
+chmod -R a+r,g+w .
+find . -size 0 -delete
+find . -name gain-errors

@@ -1,0 +1,49 @@
+#!/bin/bash
+readarray -t zipfiles <<<"$(ls *.zip)"
+DELIM=' - '
+
+for zipfile in "${zipfiles[@]}"
+do
+	if [ -z "$zipfile" ]
+	then
+		break
+	fi
+	echo processing $zipfile
+	newstr=$(sed -e"s/${DELIM}/#/" -e's/.zip//'<<<$zipfile)
+	readarray -d '#' -t foo <<<"${newstr}#"
+	artist="${foo[0]}"
+	album="${foo[1]}"
+
+	echo artist: $artist
+	echo album: $album
+
+	newdir="$artist"/"$album"
+	if compgen -G "$newdir"/*.flac > /dev/null
+	then
+		ls "$newdir"/*.flac
+		echo "already exists, exiting"
+		continue
+	fi
+	echo creating: ^${newdir}^
+	mkdir -p "$newdir"
+
+	(
+		cd "$newdir"
+		unzip ../../"$zipfile"
+		rename "s/${artist}${DELIM}${album}${DELIM}//" *.flac
+#		rename "s/ /${DELIM}/" *.flac
+		~/bin/scripts/gain-flac . 2>> gain-errors
+		find . -size 0 -delete
+		~/bin/scripts/lyrics-flac
+	)
+
+	mv "$zipfile" -t processed
+done
+
+mv -u *.flac -t tracks 2>/dev/null && \
+  echo "Individual tracks found, run $(tput setaf 3)process$(tput sgr0) in tracks directory"
+
+chown -R :audio .
+chmod -R a+r,g+w .
+
+find . -name gain-errors
