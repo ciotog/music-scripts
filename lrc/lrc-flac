@@ -1,0 +1,48 @@
+#!/bin/bash
+
+function checkflac() {
+	flacfile="$1"
+
+	filebase=$(sed -e's/.flac//'<<<$flacfile)
+	lrcfile=${filebase}.lrc
+	chkfile=.${filebase}.lrccheck
+
+	if [[ -e "${chkfile}" ]]
+	then
+		return
+	fi
+
+	if [[ ! -s "${lrcfile}" ]]
+	then
+#		echo creating $(pwd)/${lrcfile}, if possible
+		ARTIST=$(metaflac --show-tag=ARTIST "${flacfile}"|sed -e's/ARTIST=//')
+		ALBUM=$(metaflac --show-tag=ALBUM "${flacfile}"|sed -e's/ALBUM=//')
+		TRACK=$(metaflac --show-tag=TITLE "${flacfile}"|sed -e's/TITLE=//')
+		syncedlyrics --synced-only "$ARTIST $ALBUM $TRACK" -o "${lrcfile}" -p lrclib netease
+		if [[ $? -ne 0 || ! -s "${lrcfile}" ]]
+		then
+			syncedlyrics --synced-only "$ARTIST $TRACK" -o "${lrcfile}" -p lrclib netease
+		fi
+	fi
+
+	if [[ ! -s "${lrcfile}" ]]
+	then
+		echo checked $(date +%F-%T) > "${chkfile}"
+	fi
+}
+
+readarray -t flacfiles <<<"$(ls *.flac 2>/dev/null)"
+
+if [[ -z "$flacfiles" ]]
+then
+	exit
+fi
+
+(
+for flacfile in "${flacfiles[@]}"
+do
+#	((i=i%8)); ((i++==0)) && wait
+#	checkflac "$flacfile" &
+	checkflac "$flacfile"
+done
+)

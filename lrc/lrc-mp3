@@ -1,0 +1,47 @@
+#!/bin/bash
+
+echo "to fix: change exiftool to mp3 equiv"
+exit
+
+function checkmp3() {
+	mp3file="$1"
+
+	filebase=$(sed -e's/.mp3//'<<<$mp3file)
+	lrcfile=${filebase}.lrc
+	chkfile=.${filebase}.lrccheck
+
+	if [ -e "${chkfile}" ]
+	then
+		return
+	fi
+
+	if [ ! -s "${lrcfile}" ]
+	then
+#		echo creating $(pwd)/${lrcfile}, if possible
+		ARTIST=$(exiftool -Artist -b "${mp3file}")
+		ALBUM=$(exiftool -Album -b "${mp3file}")
+		TRACK=$(exiftool -Title -b "${mp3file}")
+		syncedlyrics "$ARTIST $ALBUM $TRACK" -o "${lrcfile}" -p musixmatch lrclib netease genius
+	fi
+
+	if [ ! -s "${lrcfile}" ]
+	then
+		echo checked $(date +%F-%T) > "${chkfile}"
+	fi
+}
+
+readarray -t mp3files <<<"$(ls *.mp3 2>/dev/null)"
+
+if [ -z "$mp3files" ]
+then
+	exit
+fi
+
+(
+for mp3file in "${mp3files[@]}"
+do
+#	((i=i%8)); ((i++==0)) && wait
+#	checkmp3 "$mp3file" &
+	checkmp3 "$mp3file"
+done
+)

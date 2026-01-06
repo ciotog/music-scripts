@@ -1,0 +1,3 @@
+#!/bin/bash 
+find . -type d -print0 | \
+  parallel -q0 sh -c 'cd "{}" && ~/bin/scripts/lrc-mp3'
