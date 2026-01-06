@@ -1,0 +1,47 @@
+#!/bin/bash
+readarray -t flacfiles <<<"$(ls *.flac 2>/dev/null)"
+for flacfile in "${flacfiles[@]}"
+do
+	if [ -z "$flacfile" ]
+	then
+#		echo no flac files found
+		break
+	fi
+
+	filebase=$(sed -e's/.flac//'<<<$flacfile)
+	lyrfile=${filebase}.lyrics
+	txtfile=${filebase}.txt
+
+# pull the lyrics out of the flac tag, if there
+	if [ ! -s "${lyrfile}" ]
+	then
+#		echo creating $(pwd)/${lyrfile}, if possible
+		metaflac --show-tag=UNSYNCEDLYRICS "$flacfile"| \
+			sed -e's/UNSYNCEDLYRICS=//' \
+			    -e"s/’/'/">"${lyrfile}"
+	fi
+
+# fetch from the web
+	if [[ ! -s "${lyrfile}" ]]
+	then
+#		echo creating $(pwd)/${lrcfile}, if possible
+		ARTIST=$(metaflac --show-tag=ARTIST "${flacfile}"|sed -e's/ARTIST=//')
+		ALBUM=$(metaflac --show-tag=ALBUM "${flacfile}"|sed -e's/ALBUM=//')
+		TRACK=$(metaflac --show-tag=TITLE "${flacfile}"|sed -e's/TITLE=//')
+		syncedlyrics --plain-only "$ARTIST $ALBUM $TRACK" -o "${lyrfile}" -p lrclib netease genius
+		if [[ $? -ne 0 || ! -s "${lyrfile}" ]]
+		then
+			syncedlyrics --plain-only "$ARTIST $TRACK" -o "${lyrfile}" -p lrclib netease genius
+		fi
+	fi
+
+	if [ -s "${lyrfile}" ]
+	then
+		if [ ! -e "${txtfile}" ]
+		then
+			ln -s "${lyrfile}" "${txtfile}"
+		fi
+	else
+		rm "${lyrfile}"
+	fi
+done
