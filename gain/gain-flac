@@ -1,0 +1,28 @@
+#!/bin/bash
+DIR="$@"
+[ -d "$DIR" ] || exit
+DIRNAME=$DIR
+if [[ "$DIR" == "." ]]
+then
+	DIRNAME=${PWD##*/}
+fi
+echo checking directory $DIRNAME
+ls "$DIR"/*.flac >/dev/null 2>&1 || exit
+if [[ "$DIRNAME" == *"tracks" || "$tracks" == "all" ]]
+then
+	readarray -t flacfiles <<<$(ls "$DIR"/*.flac)
+
+	for flacfile in "${flacfiles[@]}"
+	do
+		metaflac --show-tag=REPLAYGAIN_TRACK_GAIN "$flacfile" | grep REPLAYGAIN >/dev/null && continue
+		echo applying gain tags to $flacfile
+		metaflac --add-replay-gain "$flacfile"
+	done
+else
+	first_file=$(ls "$DIR"/*.flac 2>/dev/null | head -n 1)
+#	echo checking first file for gain tags $first_file
+	metaflac --show-tag=REPLAYGAIN_TRACK_GAIN "$first_file" | grep REPLAYGAIN >/dev/null && exit
+	echo applying gain tags for $DIRNAME
+
+	metaflac --add-replay-gain "$DIR"/*.flac
+fi

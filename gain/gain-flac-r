@@ -1,0 +1,2 @@
+#!/bin/bash 
+find . -type d -exec ~/bin/scripts/gain-flac {} 2>> gain-errors \;
